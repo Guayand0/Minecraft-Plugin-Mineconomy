@@ -1,0 +1,93 @@
+# ############################################################################################################# #
+# +-----------------------------------------------------------------------------------------------------------+ #
+# |                                                                                                           | #
+# |           ███╗   ███╗██╗███╗  ██╗███████╗ █████╗  █████╗ ███╗  ██╗ █████╗ ███╗   ███╗██╗   ██╗            | #
+# |           ████╗ ████║██║████╗ ██║██╔════╝██╔══██╗██╔══██╗████╗ ██║██╔══██╗████╗ ████║╚██╗ ██╔╝            | #
+# |           ██╔████╔██║██║██╔██╗██║█████╗  ██║  ╚═╝██║  ██║██╔██╗██║██║  ██║██╔████╔██║ ╚████╔╝             | #
+# |           ██║╚██╔╝██║██║██║╚████║██╔══╝  ██║  ██╗██║  ██║██║╚████║██║  ██║██║╚██╔╝██║  ╚██╔╝              | #
+# |           ██║ ╚═╝ ██║██║██║ ╚███║███████╗╚█████╔╝╚█████╔╝██║ ╚███║╚█████╔╝██║ ╚═╝ ██║   ██║               | #
+# |           ╚═╝     ╚═╝╚═╝╚═╝  ╚══╝╚══════╝ ╚════╝  ╚════╝ ╚═╝  ╚══╝ ╚════╝ ╚═╝     ╚═╝   ╚═╝               | #
+# |                                                                                                           | #
+# |                    Youtube:    www.youtube.com/@davigamer1614                                             | #
+# |                    Github:     https://github.com/Guayand0/Minecraft-Plugin-Mineconomy                    | #
+# |                                                                                                           | #
+# +-----------------------------------------------------------------------------------------------------------+ #
+# ############################################################################################################# #
+
+# +----------------------------------+ #
+# |                                  | #
+# |         PLUGIN MESSAGES          | #
+# |                                  | #
+# +----------------------------------+ #
+
+messages:
+
+  admin-help:
+    - '&b<---- &aADMIN COMMANDS &b--------------------------------->'
+    - '&6/mineconomy help &7- Show all plugin commands'
+    - '&6/mineconomy reload &7- Reload the plugin'
+    - '&6/mineconomy info &7- Show plugin information'
+    - '&7Aliases: &6mineconomy&7, &6mineco'
+    - '&e/meco&7, &e/balance&7, &e/money &7- Show your economy balance'
+    - '&e/meco balance&7, &e/meco money &7- Show your economy balance'
+    - '&e/balance <player>&7, &e/money <player> &7- Show player economy balance'
+    - '&e/meco balance <player>&7, &e/meco money <player> &7- Show player economy balance'
+    - '&e/meco set <player> <amount> &7- Set player economy balance'
+    - '&e/meco add <player> <amount> &7- Add money to a player'
+    - '&e/meco take <player> <amount> &7- Take money from a player'
+    - '&e/pay <player> <amount> &7- Send money to another player'
+    - '&7Aliases: &emeco&7, &eeco'
+    - '&b<----------------------------------------------------->'
+
+  help:
+    - '&b<---- &aCOMMANDS &b--------------------------------------->'
+    - '&e/balance&7, &e/money &7- Show your economy balance'
+    - '&e/pay <player> <amount> &7- Send money to another player'
+    - '&b<----------------------------------------------------->'
+
+  info:
+    - '&b&l--> --> %plugin% &e&lInfo &b&l<-- <--'
+    - '&6&l>> &ePlugin Version: &b%version%'
+    - '&6&l>> &eEconomy data storage: &b%dataStorage%'
+    - ''
+    - '&6&l>> &ePlugin Author: &b%author%'
+    - '&6&l>> &ePlugin link: &b%link%'
+
+  # If in the configuration the key "config.update-checker: true"
+  # This message will be displayed in chat only for OP players, or players
+  # with the "mineconomy.updatechecker" or "mineconomy.admin" permission
+  update-checker:
+    - '&b&l--> --> %plugin% &e&lUpdate Checker &b&l<-- <--'
+    - '&f&lNew version available!'
+    - '&f&lCurrent version: &c&l%version%&f&l, latest version: &a&l%latestVersion%&f&l!'
+    - ''
+    - '     &e&lSpigotMC -> &f&l%link%'
+    - ''
+
+  reload: '%plugin% &aThe plugin has been reloaded'
+
+  no-permission: '%chatplugin% &cYou do not have permission to use this command'
+
+  only-players: '%plugin% &cOnly players can use this command'
+
+  command-error: '%chatplugin% &cAn error occurred while processing the command'
+
+  balance:
+    show: '%chatplugin% &e%target%&7 has &a%amount%'
+    set: '%chatplugin% &7You set &e%target%&7´s balance to &a%amount%'
+    set-target: '%chatplugin% &7Your balance was set to &a%amount%'
+    given: '%chatplugin% &7You gave &a%amount% &7to &e%target%'
+    given-target: '%chatplugin% &7You received &a%amount%'
+    taken: '%chatplugin% &7You took &a%amount% &7from &e%target%'
+    taken-target: '%chatplugin% &c%amount% &7was taken from your balance'
+    insufficient-target: '%chatplugin% &cThe player does not have that much money'
+    insufficient-balance: '%chatplugin% &cYou do not have enough money'
+
+  pay:
+    sent: '%chatplugin% &7You sent &a%amount% &7to &e%target%'
+    received: '%chatplugin% &7You received &a%amount% &7from &e%target%'
+
+  invalid-amount: '%chatplugin% &cYou must enter a valid amount greater than or equal to 0'
+  invalid-positive-amount: '%chatplugin% &cYou must enter a valid amount greater than 0'
+  pay-self: '%chatplugin% &cYou cannot pay yourself'
+  player-not-found: '%chatplugin% &cPlayer not found or not online: &f%target%'

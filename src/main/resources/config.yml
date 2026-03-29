@@ -1,0 +1,67 @@
+# ############################################################################################################# #
+# +-----------------------------------------------------------------------------------------------------------+ #
+# |                                                                                                           | #
+# |           ███╗   ███╗██╗███╗  ██╗███████╗ █████╗  █████╗ ███╗  ██╗ █████╗ ███╗   ███╗██╗   ██╗            | #
+# |           ████╗ ████║██║████╗ ██║██╔════╝██╔══██╗██╔══██╗████╗ ██║██╔══██╗████╗ ████║╚██╗ ██╔╝            | #
+# |           ██╔████╔██║██║██╔██╗██║█████╗  ██║  ╚═╝██║  ██║██╔██╗██║██║  ██║██╔████╔██║ ╚████╔╝             | #
+# |           ██║╚██╔╝██║██║██║╚████║██╔══╝  ██║  ██╗██║  ██║██║╚████║██║  ██║██║╚██╔╝██║  ╚██╔╝              | #
+# |           ██║ ╚═╝ ██║██║██║ ╚███║███████╗╚█████╔╝╚█████╔╝██║ ╚███║╚█████╔╝██║ ╚═╝ ██║   ██║               | #
+# |           ╚═╝     ╚═╝╚═╝╚═╝  ╚══╝╚══════╝ ╚════╝  ╚════╝ ╚═╝  ╚══╝ ╚════╝ ╚═╝     ╚═╝   ╚═╝               | #
+# |                                                                                                           | #
+# |                    Youtube:    www.youtube.com/@davigamer1614                                             | #
+# |                    Github:     https://github.com/Guayand0/Minecraft-Plugin-Mineconomy                    | #
+# |                                                                                                           | #
+# +-----------------------------------------------------------------------------------------------------------+ #
+# ############################################################################################################# #
+
+# +----------------------------------+ #
+# |                                  | #
+# |          PLUGIN CONFIG           | #
+# |                                  | #
+# +----------------------------------+ #
+
+config:
+
+  # Modifying this requires a server restart for the changes to take effect
+  storage:
+
+    # Available storage data type: YAML, JSON, SQLITE, MYSQL
+    # YAML    -> plugins/Mineconomy/player_economy/YAML/<UUID>.yml
+    # JSON    -> plugins/Mineconomy/player_economy/JSON/<UUID>.json
+    # SQLITE  -> plugins/Mineconomy/player_economy/SQLITE/mineconomy.db
+    # MYSQL   -> Use the keys below
+    type: SQLITE
+
+    # Connection data
+    user: root
+    password:
+    database: mineconomy
+    host: localhost
+    port: 3306
+    connection_params:
+
+    # Full connection data uri
+    # mysql-uri: mysql://<user>:<password>@<host>:<port>/<database>[params]
+    mysql-uri:
+
+  # Enable/Disable the update checker
+  # If set to true, OP players and players with the "mineconomy.updatechecker" or
+  # "mineconomy.admin" permission will receive a message when an update is available
+  update-checker: true
+
+  # Chat prefix for plugin chat messages for variable %chatplugin%
+  chat-prefix: "&4&l[&6&lMineconomy&4&l]&f"
+
+  # Enable/Disable messages sent to the target player when an admin sets, gives or takes balance
+  # If set to false, the affected player will not receive those balance change messages
+  notify-target-balance-changes: false
+
+  # Enable/Disable the "/balance <player>" and "/money <player>" command and their tab completion
+  # If set to false, players will not be able to use "/balance" and "/money"
+  # This plugin uses "/meco", "/meco balance <player>", "/meco money <player>", "/balance <player>" and "/money <player>"
+  # This configuration key only disables "/balance" and "/money" in this plugin
+  balance-command-enabled: true
+
+  # Enable/Disable the "/pay <player> <amount>" command and its tab completion
+  # If set to false, players will not be able to use "/pay"
+  pay-command-enabled: true

@@ -1,0 +1,43 @@
+main: dev.guayand0.Mineconomy
+name: Mineconomy
+version: 1.0.1
+author: Guayand0
+api-version: 1.13
+folia-supported: true
+description: This plugin adds a simple economy.
+
+depend:
+  - Vault
+softdepend:
+  - PlaceholderAPI
+
+commands:
+  mineconomy:
+    description: Initial command
+    usage: /mineconomy <arg0>
+    aliases: mineco
+    permission: mineconomy.admin
+  meco:
+    description: Meco Command
+    usage: /meco <arg0> [<arg1> <arg2>]
+    aliases: eco
+  balance:
+    description: Balance Command
+    usage: /balance <player>
+    aliases: [bal, money]
+  pay:
+    description: Pay another player
+    usage: /pay <player> <amount>
+
+permissions:
+  mineconomy.admin:
+    default: op
+    description: Used to unlock admin commands
+    children:
+      mineconomy.updatechecker: true
+  mineconomy.updatechecker:
+    default: false
+    description: Allows you to receive a message if there is a plugin update
+  mineconomy.use:
+    default: true
+    description: Allows you to use the plugin user commands
