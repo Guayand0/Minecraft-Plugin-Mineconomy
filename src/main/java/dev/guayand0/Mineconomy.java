@@ -33,7 +33,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
     public boolean PlaceholderAPIEnable = false;
     public final Map<String, String> placeholders = new HashMap<>();
 
-    public final static int spigotID = 0;
+    public final static int spigotID = 133824;
     public final static int bstatsID = 30394;
 
     private final MessageUtils MU = new MessageUtils();
