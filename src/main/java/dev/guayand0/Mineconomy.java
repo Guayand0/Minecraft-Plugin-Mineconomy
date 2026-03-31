@@ -1,6 +1,5 @@
 package dev.guayand0;
 
-//import com.Guayand0.GY0lib.
 import dev.guayand0.commands.*;
 import dev.guayand0.utils.*;
 import dev.guayand0.zlib.*;
@@ -38,6 +37,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
 
     private final MessageUtils MU = new MessageUtils();
     private final UpdateChecker UC = new UpdateChecker();
+    private final EconomyStorage ES = new EconomyStorage(this);
 
     private EconomyManager economyManager;
     private VaultEconomyProvider vaultEconomyProvider;
@@ -52,6 +52,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
             saveDefaultConfig();
             reloadMessages();
             registrarPluginPlaceholders();
+
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText("&7<--------------------------------------------------------------------->"));
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText(prefix + " &f- (&aVersion: &b" + currentVersion + "&f), &fBy &dGuayand0 &f- &6Thanks for downloading!"));
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText("&7<--------------------------------------------------------------------->"));
@@ -124,11 +125,11 @@ public class Mineconomy extends JavaPlugin implements Listener {
         placeholders.put("%latestversion%", lastVersion);
         placeholders.put("%link%", "https://www.spigotmc.org/resources/" + spigotID);
         placeholders.put("%author%", "Guayand0");
-        placeholders.put("%dataStorage%", getConfig().getString("config.storage.type", "SQLITE"));
+        placeholders.put("%dataStorage%", String.valueOf(ES.getType()));
     }
 
     private String getBStatsDatabaseSystem() {
-        String type = getConfig().getString("config.storage.type", "SQLITE");
+        String type = String.valueOf(ES.getType());
         if (type == null || type.trim().isEmpty()) {
             return "SQLITE";
         }
@@ -178,6 +179,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText("&fCurrent version: &c" + currentVersion + "&f, latest version: &a" + lastVersion + "&f!"));
             Bukkit.getConsoleSender().sendMessage("");
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText( "     &eSpigotMC -> &fhttps://www.spigotmc.org/resources/" + spigotID));
+            Bukkit.getConsoleSender().sendMessage(MU.getColoredText( "     &ePolyMart -> &fhttps://www.polymart.org/product/9587"));
             Bukkit.getConsoleSender().sendMessage("");
         } else {
             if (!updateCheckerWork) {

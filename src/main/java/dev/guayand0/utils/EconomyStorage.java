@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -37,7 +38,7 @@ public class EconomyStorage {
     private final Plugin plugin;
     private final File rootFolder;
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final StorageType type;
+    private StorageType type;
     private final Map<UUID, Double> mysqlBalanceCache = new ConcurrentHashMap<>();
     private final Set<UUID> mysqlKnownAccounts = ConcurrentHashMap.newKeySet();
     private final MysqlConnectionInfo mysqlConnectionInfo;
@@ -63,7 +64,6 @@ public class EconomyStorage {
             ensureFolderExists(getTypeFolder());
             initializeSqlStorage();
         } else if (type == StorageType.MYSQL) {
-            initializeMysqlStatements();
             initializeSqlStorage();
         }
     }
@@ -305,20 +305,26 @@ public class EconomyStorage {
                 "balance DOUBLE NOT NULL DEFAULT 0" +
                 ")";
 
-        if (type == StorageType.MYSQL) {
-            try (Statement statement = getMysqlConnection().createStatement()) {
-                statement.executeUpdate(sql);
-            } catch (SQLException exception) {
-                throw new RuntimeException("Could not initialize MYSQL storage", exception);
+        try {
+            if (type == StorageType.MYSQL) {
+                initializeMysqlStatements();
+                try (Statement statement = getMysqlConnection().createStatement()) {
+                    statement.executeUpdate(sql);
+                }
+            } else if (type == StorageType.SQLITE) {
+                try (Connection connection = openConnection();
+                     Statement statement = connection.createStatement()) {
+                    statement.executeUpdate(sql);
+                }
             }
-            return;
-        }
+        } catch (Exception e) {
+            plugin.getLogger().warning("[" + type + "] failed to initialize, switching to YAML...");
 
-        try (Connection connection = openConnection();
-             Statement statement = connection.createStatement()) {
-            statement.executeUpdate(sql);
-        } catch (SQLException exception) {
-            throw new RuntimeException("Could not initialize " + type + " storage", exception);
+            // Fallback
+            type = StorageType.YAML;
+
+            // Crear carpeta YAML por si no existe
+            ensureFolderExists(getTypeFolder());
         }
     }
 
