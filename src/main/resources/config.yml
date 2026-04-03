@@ -63,3 +63,8 @@ config:
   # Enable/Disable the "/pay <player> <amount>" command and its tab completion
   # If set to false, players will not be able to use "/pay"
   pay-command-enabled: true
+
+  # Clear loaded player balance cache every X minutes
+  # This is not used in MySQL
+  # 300 = 5 hours, 0 = disabled
+  loaded-player-cache-clear-minutes: 300

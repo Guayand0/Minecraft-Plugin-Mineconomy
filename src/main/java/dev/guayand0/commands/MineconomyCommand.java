@@ -31,6 +31,7 @@ public class MineconomyCommand implements CommandExecutor {
 
                 case "reload":
                     plugin.saveDefaultConfig();
+                    plugin.syncConfigDefaults();
                     plugin.reloadConfig();
                     plugin.reloadMessages();
                     plugin.registrarPluginPlaceholders();
@@ -38,6 +39,7 @@ public class MineconomyCommand implements CommandExecutor {
                     return true;
 
                 case "info":
+                    plugin.registrarPluginPlaceholders();
                     plugin.sendMessage(sender, "messages.info", plugin.placeholders);
                     return true;
 

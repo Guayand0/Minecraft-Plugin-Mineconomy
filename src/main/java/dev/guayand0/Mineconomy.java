@@ -1,7 +1,13 @@
 package dev.guayand0;
 
 import dev.guayand0.commands.*;
-import dev.guayand0.utils.*;
+import dev.guayand0.economy.EconomyManager;
+import dev.guayand0.economy.type.StorageType;
+import dev.guayand0.placeholderapi.PAPIVariables;
+import dev.guayand0.utils.folia.SchedulerCompat;
+import dev.guayand0.utils.TabComplete;
+import dev.guayand0.utils.config.YamlDefaultsSynchronizer;
+import dev.guayand0.utils.vault.VaultEconomyProvider;
 import dev.guayand0.zlib.*;
 import net.milkbowl.vault.economy.Economy;
 import org.bstats.bukkit.Metrics;
@@ -37,12 +43,12 @@ public class Mineconomy extends JavaPlugin implements Listener {
 
     private final MessageUtils MU = new MessageUtils();
     private final UpdateChecker UC = new UpdateChecker();
-    private final EconomyStorage ES = new EconomyStorage(this);
 
     private EconomyManager economyManager;
     private VaultEconomyProvider vaultEconomyProvider;
     private SchedulerCompat schedulerCompat;
     private FileConfiguration messagesConfig;
+    private YamlDefaultsSynchronizer yamlDefaultsSynchronizer;
 
     private Economy economy;
 
@@ -50,6 +56,9 @@ public class Mineconomy extends JavaPlugin implements Listener {
     public void onEnable() {
         try {
             saveDefaultConfig();
+            yamlDefaultsSynchronizer = new YamlDefaultsSynchronizer(this);
+            syncConfigDefaults();
+            reloadConfig();
             reloadMessages();
             registrarPluginPlaceholders();
 
@@ -60,6 +69,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
             economyManager = new EconomyManager(this);
             vaultEconomyProvider = new VaultEconomyProvider(this);
             schedulerCompat = new SchedulerCompat(this);
+            scheduleLoadedPlayerCacheCleanup();
 
             if (!setupEconomy()) {
                 Bukkit.getConsoleSender().sendMessage(MU.getColoredText(prefix + " &cVault not found!"));
@@ -67,7 +77,18 @@ public class Mineconomy extends JavaPlugin implements Listener {
                 return;
             }
 
+            // Usar variables PlaceholderAPI
             PlaceholderAPIEnable = Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null;
+            if (PlaceholderAPIEnable) {
+                Bukkit.getConsoleSender().sendMessage(MU.getColoredText(prefix + " &fHooked into &aPlaceholderAPI&f!"));
+                schedulerCompat.runGlobalLater(() -> {
+                    try {
+                        new PAPIVariables(this).register();
+                    } catch (Exception e) {
+                        Bukkit.getConsoleSender().sendMessage(MU.getColoredText(prefix + " &cError registering internal placeholders: " + e.getMessage()));
+                    }
+                }, 10L); // espera 0.5 segundos (10 ticks)
+            }
 
             registrarComandos();
             registrarEventos();
@@ -85,7 +106,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
         } catch (Exception e) {
             getServer().getPluginManager().disablePlugin(this);
             e.printStackTrace();
-            Bukkit.getConsoleSender().sendMessage(MU.getColoredText(prefix + " &cError while enabling plugin"));
+            Bukkit.getConsoleSender().sendMessage(MU.getColoredText(prefix + " &cError while enabling plugin!"));
         }
     }
 
@@ -119,17 +140,52 @@ public class Mineconomy extends JavaPlugin implements Listener {
     public void registrarPluginPlaceholders() {
         placeholders.clear();
 
+        String storageType = economyManager != null ? String.valueOf(economyManager.getStorageType()) : String.valueOf(getConfiguredStorageType());
+        String averageStorageTime = economyManager != null ? economyManager.getAverageStorageOperationMillisFormatted() : "0.000";
+        String storageOperations = economyManager != null ? String.valueOf(economyManager.getTotalStorageOperationCount()) : "0";
+        String readStorageOperations = economyManager != null ? String.valueOf(economyManager.getReadStorageOperationCount()) : "0";
+        String writeStorageOperations = economyManager != null ? String.valueOf(economyManager.getWriteStorageOperationCount()) : "0";
+        String readStorageAverageTime = economyManager != null ? economyManager.getReadStorageAverageMillisFormatted() : "0.000";
+        String writeStorageAverageTime = economyManager != null ? economyManager.getWriteStorageAverageMillisFormatted() : "0.000";
+        String loadedPlayersCount = economyManager != null ? String.valueOf(economyManager.getLoadedPlayersCount()) : "0";
+
         placeholders.put("%plugin%", prefix);
         placeholders.put("%chatplugin%", getConfig().getString("config.chat-prefix", "&4&l[&6&lMineconomy&4&l]&f"));
         placeholders.put("%version%", currentVersion);
         placeholders.put("%latestversion%", lastVersion);
         placeholders.put("%link%", "https://www.spigotmc.org/resources/" + spigotID);
         placeholders.put("%author%", "Guayand0");
-        placeholders.put("%dataStorage%", String.valueOf(ES.getType()));
+        placeholders.put("%dataStorage%", storageType);
+        placeholders.put("%playerTop%", "0");
+        placeholders.put("%playerName%", "");
+        placeholders.put("%balance%", "");
+        placeholders.put("%totalStorageAvgQueryMs%", averageStorageTime);
+        placeholders.put("%totalStorageQueryCount%", storageOperations);
+        placeholders.put("%readStorageQueryCount%", readStorageOperations);
+        placeholders.put("%writeStorageQueryCount%", writeStorageOperations);
+        placeholders.put("%readStorageAvgQueryMs%", readStorageAverageTime);
+        placeholders.put("%writeStorageAvgQueryMs%", writeStorageAverageTime);
+        placeholders.put("%loadedPlayersCount%", loadedPlayersCount);
+    }
+
+    private void scheduleLoadedPlayerCacheCleanup() {
+        int clearMinutes = getConfig().getInt("config.loaded-player-cache-clear-minutes", 300);
+        if (clearMinutes <= 0) {
+            return;
+        }
+
+        long periodTicks = clearMinutes * 60L * 20L;
+        schedulerCompat.runGlobalTimer(() -> {
+            if (economyManager != null) {
+                economyManager.clearLoadedPlayerCache();
+            }
+        }, periodTicks, periodTicks);
     }
 
     private String getBStatsDatabaseSystem() {
-        String type = String.valueOf(ES.getType());
+        String type = economyManager != null
+                ? String.valueOf(economyManager.getStorageType())
+                : String.valueOf(getConfiguredStorageType());
         if (type == null || type.trim().isEmpty()) {
             return "SQLITE";
         }
@@ -141,6 +197,10 @@ public class Mineconomy extends JavaPlugin implements Listener {
             case "YAML": return "YAML";
             default: return "OTHER";
         }
+    }
+
+    private StorageType getConfiguredStorageType() {
+        return StorageType.fromConfig(getConfig().getString("config.storage.type", "SQLITE"));
     }
 
     private void checkUpdatesAsync() {
@@ -218,7 +278,20 @@ public class Mineconomy extends JavaPlugin implements Listener {
             saveResource("messages.yml", false);
         }
 
+        syncMessagesDefaults();
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+    }
+
+    public void syncConfigDefaults() {
+        if (yamlDefaultsSynchronizer != null) {
+            yamlDefaultsSynchronizer.syncConfigKeys();
+        }
+    }
+
+    public void syncMessagesDefaults() {
+        if (yamlDefaultsSynchronizer != null) {
+            yamlDefaultsSynchronizer.syncMessagesKeys();
+        }
     }
 
     public void sendMessage(CommandSender sender, String path, Map<String, String> placeholders) {

@@ -1,4 +1,4 @@
-package dev.guayand0.utils;
+package dev.guayand0.utils.folia;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;

@@ -10,11 +10,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class TabComplete implements TabCompleter {
 
+    private static final long PLAYER_SNAPSHOT_CACHE_MILLIS = 2000L;
+
     private final Mineconomy plugin;
+    private final Map<String, PlayerSnapshot> playerSnapshots = new ConcurrentHashMap<>();
 
     public TabComplete(Mineconomy plugin) {
         this.plugin = plugin;
@@ -48,6 +53,12 @@ public class TabComplete implements TabCompleter {
 
                 if (args.length == 1) {
                     completions.addAll(Arrays.asList("balance", "money"));
+                } else if (args.length == 2 && Arrays.asList("balance", "money").contains(args[0].toLowerCase())
+                        && sender.hasPermission("mineconomy.use.top")) {
+                    completions.addAll(Arrays.asList("top"));
+                } else if (args.length == 3 && Arrays.asList("balance", "money").contains(args[0].toLowerCase())
+                        && "top".equalsIgnoreCase(args[1])) {
+                    completions.addAll(Arrays.asList("1", "3", "5"));
                 }
 
                 return filterAndSort(completions, currentArg);
@@ -59,18 +70,26 @@ public class TabComplete implements TabCompleter {
             } else if (args.length == 2) {
 
                 switch (args[0].toLowerCase()) {
+                    case "balance":
+                    case "money":
+                        completions.addAll(getTopAndPlayersSnapshot(sender, "meco:" + args[0].toLowerCase()));
+                        break;
                     case "set":
                     case "add":
                     case "take":
-                    case "balance":
-                    case "money":
-                        completions.addAll(plugin.getEconomyManager().getKnownPlayerNames());
+                        completions.addAll(getPlayerSnapshot(sender, "meco:" + args[0].toLowerCase()));
                         break;
                 }
 
             } else if (args.length == 3) {
 
                 switch (args[0].toLowerCase()) {
+                    case "balance":
+                    case "money":
+                        if ("top".equalsIgnoreCase(args[1])) {
+                            completions.addAll(Arrays.asList("1", "3", "5"));
+                        }
+                        break;
                     case "set":
                     case "add":
                     case "take":
@@ -81,12 +100,19 @@ public class TabComplete implements TabCompleter {
             }
 
         } else if (Arrays.asList("balance", "money").contains(command.getName().toLowerCase())) {
-            if (!plugin.getConfig().getBoolean("config.balance-command-enabled", true) || !hasAdminPermission) {
+            if (!plugin.getConfig().getBoolean("config.balance-command-enabled", true)) {
                 return Collections.emptyList();
             }
 
             if (args.length == 1) {
-                completions.addAll(plugin.getEconomyManager().getKnownPlayerNames());
+                if (sender.hasPermission("mineconomy.use.top")) {
+                    completions.add("top");
+                }
+                if (hasAdminPermission) {
+                    completions.addAll(getPlayerSnapshot(sender, command.getName().toLowerCase()));
+                }
+            } else if (args.length == 2 && "top".equalsIgnoreCase(args[0])) {
+                completions.addAll(Arrays.asList("1", "3", "5"));
             }
         } else if (command.getName().equalsIgnoreCase("pay")) {
             if (!plugin.getConfig().getBoolean("config.pay-command-enabled", true)) {
@@ -94,7 +120,7 @@ public class TabComplete implements TabCompleter {
             }
 
             if (args.length == 1) {
-                completions.addAll(plugin.getEconomyManager().getKnownPlayerNames());
+                completions.addAll(getPlayerSnapshot(sender, "pay"));
             } else if (args.length == 2) {
                 completions.addAll(Arrays.asList("0"));
             }
@@ -107,7 +133,37 @@ public class TabComplete implements TabCompleter {
         return completions.stream()
                 .distinct()
                 .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(currentArg))
-                .sorted(String.CASE_INSENSITIVE_ORDER)
                 .collect(Collectors.toList());
+    }
+
+    private List<String> getPlayerSnapshot(CommandSender sender, String contextKey) {
+        long now = System.currentTimeMillis();
+        String senderKey = sender.getName().toLowerCase(Locale.ROOT) + "|" + contextKey;
+        PlayerSnapshot snapshot = playerSnapshots.get(senderKey);
+
+        if (snapshot != null && snapshot.expiresAtMillis > now) {
+            return snapshot.playerNames;
+        }
+
+        List<String> playerNames = new ArrayList<>(plugin.getEconomyManager().getRegisteredPlayerNames());
+        playerSnapshots.put(senderKey, new PlayerSnapshot(playerNames, now + PLAYER_SNAPSHOT_CACHE_MILLIS));
+        return playerNames;
+    }
+
+    private List<String> getTopAndPlayersSnapshot(CommandSender sender, String contextKey) {
+        List<String> completions = new ArrayList<>();
+        completions.add("top");
+        completions.addAll(getPlayerSnapshot(sender, contextKey));
+        return completions;
+    }
+
+    private static class PlayerSnapshot {
+        private final List<String> playerNames;
+        private final long expiresAtMillis;
+
+        private PlayerSnapshot(List<String> playerNames, long expiresAtMillis) {
+            this.playerNames = playerNames;
+            this.expiresAtMillis = expiresAtMillis;
+        }
     }
 }

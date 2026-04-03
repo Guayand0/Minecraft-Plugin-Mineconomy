@@ -52,7 +52,7 @@ public class PayCommand implements CommandExecutor {
         }
 
         if (player.getUniqueId().equals(target.getUniqueId())) {
-            plugin.sendMessage(sender, "messages.pay-self", ph);
+            plugin.sendMessage(sender, "messages.pay.self", ph);
             return true;
         }
 

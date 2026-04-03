@@ -1,6 +1,7 @@
-package dev.guayand0.utils;
+package dev.guayand0.utils.vault;
 
 import dev.guayand0.Mineconomy;
+import dev.guayand0.economy.EconomyManager;
 import net.milkbowl.vault.economy.AbstractEconomy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;

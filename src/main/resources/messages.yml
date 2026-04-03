@@ -28,8 +28,8 @@ messages:
     - '&6/mineconomy reload &7- Reload the plugin'
     - '&6/mineconomy info &7- Show plugin information'
     - '&7Aliases: &6mineconomy&7, &6mineco'
-    - '&e/meco&7, &e/balance&7, &e/money &7- Show your economy balance'
-    - '&e/meco balance&7, &e/meco money &7- Show your economy balance'
+    - '&e/balance&7, &e/money &7- Show your economy balance'
+    - '&e/meco&7, &e/meco balance&7, &e/meco money &7- Show your economy balance'
     - '&e/balance <player>&7, &e/money <player> &7- Show player economy balance'
     - '&e/meco balance <player>&7, &e/meco money <player> &7- Show player economy balance'
     - '&e/meco set <player> <amount> &7- Set player economy balance'
@@ -48,10 +48,16 @@ messages:
   info:
     - '&b&l--> --> %plugin% &e&lInfo &b&l<-- <--'
     - '&6&l>> &ePlugin Version: &b%version%'
-    - '&6&l>> &eEconomy data storage: &b%dataStorage%'
+    - '&6&l>> &eEconomy storage: &b%dataStorage%'
     - ''
-    - '&6&l>> &ePlugin Author: &b%author%'
-    - '&6&l>> &ePlugin link: &b%link%'
+    - '&6&l>> &ePlayers loaded: &b%loadedPlayersCount%' # This is not used in MySQL
+    - ''
+    - '&6&l>> &eStorage operations: &b%totalStorageQueryCount%'
+    - '&6&l>> &eAverage time: &7(%totalStorageAvgQueryMs% ms)'
+    #- '&6&l>> &eRead operations: &b%readStorageQueryCount%'
+    #- '&6&l>> &eAverage read time: &7(%readStorageAvgQueryMs% ms)'
+    #- '&6&l>> &eWrite operations: &b%writeStorageQueryCount%'
+    #- '&6&l>> &eAverage write time: &7(%writeStorageAvgQueryMs% ms)'
 
   # If in the configuration the key "config.update-checker: true"
   # This message will be displayed in chat only for OP players, or players
@@ -83,11 +89,18 @@ messages:
     insufficient-target: '%chatplugin% &cThe player does not have that much money'
     insufficient-balance: '%chatplugin% &cYou do not have enough money'
 
+  top:
+    title: '&b<---- &6TOP ECONOMY &b------------------------------------>'
+    entry: '&6#%playerTop_<top>% &b%playerName_<top>% &7- &a%balance_<top>%'
+    player:
+      - ''
+      - '&fYou: &6#%playerTop% &d%playerName% &7- &a%balance%'
+
   pay:
+    self: '%chatplugin% &cYou cannot pay yourself'
     sent: '%chatplugin% &7You sent &a%amount% &7to &e%target%'
     received: '%chatplugin% &7You received &a%amount% &7from &e%target%'
 
   invalid-amount: '%chatplugin% &cYou must enter a valid amount greater than or equal to 0'
   invalid-positive-amount: '%chatplugin% &cYou must enter a valid amount greater than 0'
-  pay-self: '%chatplugin% &cYou cannot pay yourself'
   player-not-found: '%chatplugin% &cPlayer not found or not online: &f%target%'

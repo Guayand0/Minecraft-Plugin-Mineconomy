@@ -1,7 +1,6 @@
 package dev.guayand0.zlib;
 
 import me.clip.placeholderapi.PlaceholderAPI;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -47,7 +46,6 @@ public class MessageUtils {
             String value = entry.getValue();
 
             if (value == null) {
-                Bukkit.getConsoleSender().sendMessage(getColoredText("&cWARNING: Placeholder with key " + key + " is null"));
                 value = "";
             }
 

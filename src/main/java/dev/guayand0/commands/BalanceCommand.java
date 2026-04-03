@@ -1,6 +1,7 @@
 package dev.guayand0.commands;
 
 import dev.guayand0.Mineconomy;
+import dev.guayand0.economy.EconomyManager;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -12,6 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BalanceCommand implements CommandExecutor {
+
+    private static final int DEFAULT_TOP_SIZE = 10;
 
     private final Mineconomy plugin;
     private final DecimalFormat amountFormat = new DecimalFormat("0.##");
@@ -31,6 +34,15 @@ public class BalanceCommand implements CommandExecutor {
 
         if (args.length == 0) {
             return handleSelfBalance(sender, isAdmin, ph);
+        }
+
+        if ("top".equalsIgnoreCase(args[0])) {
+            if (!sender.hasPermission("mineconomy.use.top")) {
+                plugin.sendMessage(sender, "messages.no-permission", ph);
+                return true;
+            }
+            int topSize = args.length >= 2 ? parseTopSize(args[1]) : DEFAULT_TOP_SIZE;
+            return sendTopBalance(sender, topSize, ph);
         }
 
         if (!isAdmin) {
@@ -77,5 +89,43 @@ public class BalanceCommand implements CommandExecutor {
         ph.put("%target%", target.getName());
         ph.put("%amount%", amountFormat.format(plugin.getEconomyManager().getBalance(target)));
         plugin.sendMessage(sender, "messages.balance.show", ph);
+    }
+
+    private boolean sendTopBalance(CommandSender sender, int requestedTopSize, Map<String, String> ph) {
+        plugin.sendMessage(sender, "messages.top.title", ph);
+
+        int safeTopSize = Math.max(1, requestedTopSize);
+        int position = 1;
+        for (EconomyManager.TopEntry entry : plugin.getEconomyManager().getTopEntries(safeTopSize)) {
+            Map<String, String> entryPlaceholders = new HashMap<>(ph);
+            entryPlaceholders.put("<top>", String.valueOf(position));
+            entryPlaceholders.put("%playerTop_" + position + "%", String.valueOf(position));
+            entryPlaceholders.put("%playerName%", entry.getPlayerName());
+            entryPlaceholders.put("%balance%", amountFormat.format(entry.getBalance()));
+            entryPlaceholders.put("%playerName_" + position + "%", entry.getPlayerName());
+            entryPlaceholders.put("%balance_" + position + "%", amountFormat.format(entry.getBalance()));
+            plugin.sendMessage(sender, "messages.top.entry", entryPlaceholders);
+            position++;
+        }
+
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
+            Map<String, String> playerPlaceholders = new HashMap<>(ph);
+            playerPlaceholders.put("%playerTop%", String.valueOf(plugin.getEconomyManager().getTopPosition(player.getUniqueId())));
+            playerPlaceholders.put("%playerName%", player.getName());
+            playerPlaceholders.put("%balance%", amountFormat.format(plugin.getEconomyManager().getBalance(player)));
+            plugin.sendMessage(sender, "messages.top.player", playerPlaceholders);
+        }
+
+        return true;
+    }
+
+    private int parseTopSize(String rawTopSize) {
+        try {
+            int topSize = Integer.parseInt(rawTopSize);
+            return topSize > 0 ? topSize : DEFAULT_TOP_SIZE;
+        } catch (NumberFormatException exception) {
+            return DEFAULT_TOP_SIZE;
+        }
     }
 }
