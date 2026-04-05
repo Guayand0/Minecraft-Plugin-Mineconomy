@@ -46,6 +46,7 @@ public class MessageUtils {
             String value = entry.getValue();
 
             if (value == null) {
+                // Bukkit.getConsoleSender().sendMessage(getColoredText("&cWARNING: Placeholder with key " + key + " is null"));
                 value = "";
             }
 

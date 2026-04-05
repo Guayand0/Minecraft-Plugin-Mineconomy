@@ -36,11 +36,12 @@ config:
     user: root
     password:
     database: mineconomy
+    table: economy
     host: localhost
     port: 3306
     connection_params:
 
-    # Full connection data uri
+    # Full connection data uri, use the "table" above to select the economy
     # mysql-uri: mysql://<user>:<password>@<host>:<port>/<database>[params]
     mysql-uri:
 

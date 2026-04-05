@@ -89,6 +89,27 @@ public class EconomyStorage {
         backend.close();
     }
 
+    public int getActiveMysqlConnectionCount() {
+        if (backend instanceof MysqlEconomyStorage) {
+            return ((MysqlEconomyStorage) backend).getActiveConnectionCount();
+        }
+        return 0;
+    }
+
+    public double getMysqlBalanceFromTable(String tableName, UUID uuid) {
+        if (backend instanceof MysqlEconomyStorage) {
+            return ((MysqlEconomyStorage) backend).getBalanceFromTable(tableName, uuid);
+        }
+        throw new IllegalStateException("MYSQL table lookup is only available for MYSQL storage");
+    }
+
+    public List<MysqlEconomyStorage.MysqlTopEntry> getMysqlTopBalancesFromTable(String tableName, int limit) {
+        if (backend instanceof MysqlEconomyStorage) {
+            return ((MysqlEconomyStorage) backend).getTopBalancesFromTable(tableName, limit);
+        }
+        throw new IllegalStateException("MYSQL table lookup is only available for MYSQL storage");
+    }
+
     private StorageBackend createBackend(Plugin plugin, StorageType type) {
         switch (type) {
             case YAML:

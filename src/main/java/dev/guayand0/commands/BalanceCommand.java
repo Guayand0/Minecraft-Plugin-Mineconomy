@@ -86,8 +86,12 @@ public class BalanceCommand implements CommandExecutor {
     }
 
     private void sendBalanceMessage(CommandSender sender, OfflinePlayer target, Map<String, String> ph) {
+        double balance = plugin.getEconomyManager().getBalance(target);
         ph.put("%target%", target.getName());
-        ph.put("%amount%", amountFormat.format(plugin.getEconomyManager().getBalance(target)));
+        ph.put("%amount%", amountFormat.format(balance));
+        ph.put("%amount_short%", plugin.formatShortAmount(balance));
+        ph.put("%balance%", amountFormat.format(balance));
+        ph.put("%balance_short%", plugin.formatShortAmount(balance));
         plugin.sendMessage(sender, "messages.balance.show", ph);
     }
 
@@ -102,8 +106,11 @@ public class BalanceCommand implements CommandExecutor {
             entryPlaceholders.put("%playerTop_" + position + "%", String.valueOf(position));
             entryPlaceholders.put("%playerName%", entry.getPlayerName());
             entryPlaceholders.put("%balance%", amountFormat.format(entry.getBalance()));
+            entryPlaceholders.put("%balance_short%", plugin.formatShortAmount(entry.getBalance()));
             entryPlaceholders.put("%playerName_" + position + "%", entry.getPlayerName());
             entryPlaceholders.put("%balance_" + position + "%", amountFormat.format(entry.getBalance()));
+            entryPlaceholders.put("%balance_short_" + position + "%", plugin.formatShortAmount(entry.getBalance()));
+            entryPlaceholders.put("%balance_short_<top>%", plugin.formatShortAmount(entry.getBalance()));
             plugin.sendMessage(sender, "messages.top.entry", entryPlaceholders);
             position++;
         }
@@ -111,9 +118,11 @@ public class BalanceCommand implements CommandExecutor {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             Map<String, String> playerPlaceholders = new HashMap<>(ph);
+            double balance = plugin.getEconomyManager().getBalance(player);
             playerPlaceholders.put("%playerTop%", String.valueOf(plugin.getEconomyManager().getTopPosition(player.getUniqueId())));
             playerPlaceholders.put("%playerName%", player.getName());
-            playerPlaceholders.put("%balance%", amountFormat.format(plugin.getEconomyManager().getBalance(player)));
+            playerPlaceholders.put("%balance%", amountFormat.format(balance));
+            playerPlaceholders.put("%balance_short%", plugin.formatShortAmount(balance));
             plugin.sendMessage(sender, "messages.top.player", playerPlaceholders);
         }
 

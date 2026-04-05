@@ -2,6 +2,8 @@ package dev.guayand0;
 
 import dev.guayand0.commands.*;
 import dev.guayand0.economy.EconomyManager;
+import dev.guayand0.economy.backend.sql.MysqlEconomyLookupService;
+import dev.guayand0.economy.backend.sql.MysqlStorageSettings;
 import dev.guayand0.economy.type.StorageType;
 import dev.guayand0.placeholderapi.PAPIVariables;
 import dev.guayand0.utils.folia.SchedulerCompat;
@@ -25,10 +27,13 @@ import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.math.RoundingMode;
 import java.net.SocketTimeoutException;
+import java.text.DecimalFormat;
 import java.util.*;
 
 public class Mineconomy extends JavaPlugin implements Listener {
+    private static final String[] SHORT_SUFFIXES = {"", "K", "M", "B", "T", "Q"};
 
     public final String prefix = "&4&l[&6&lMineconomy&4&l]&f";
     public final String pluginName = getDescription().getName().toLowerCase();
@@ -37,6 +42,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
     public boolean updateCheckerWork = true;
     public boolean PlaceholderAPIEnable = false;
     public final Map<String, String> placeholders = new HashMap<>();
+    private final DecimalFormat shortAmountFormat = new DecimalFormat("0.#");
 
     public final static int spigotID = 133824;
     public final static int bstatsID = 30394;
@@ -45,6 +51,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
     private final UpdateChecker UC = new UpdateChecker();
 
     private EconomyManager economyManager;
+    private MysqlEconomyLookupService mysqlEconomyLookupService;
     private VaultEconomyProvider vaultEconomyProvider;
     private SchedulerCompat schedulerCompat;
     private FileConfiguration messagesConfig;
@@ -55,6 +62,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         try {
+            shortAmountFormat.setRoundingMode(RoundingMode.DOWN);
             saveDefaultConfig();
             yamlDefaultsSynchronizer = new YamlDefaultsSynchronizer(this);
             syncConfigDefaults();
@@ -67,6 +75,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText("&7<--------------------------------------------------------------------->"));
 
             economyManager = new EconomyManager(this);
+            mysqlEconomyLookupService = new MysqlEconomyLookupService(economyManager);
             vaultEconomyProvider = new VaultEconomyProvider(this);
             schedulerCompat = new SchedulerCompat(this);
             scheduleLoadedPlayerCacheCleanup();
@@ -148,6 +157,8 @@ public class Mineconomy extends JavaPlugin implements Listener {
         String readStorageAverageTime = economyManager != null ? economyManager.getReadStorageAverageMillisFormatted() : "0.000";
         String writeStorageAverageTime = economyManager != null ? economyManager.getWriteStorageAverageMillisFormatted() : "0.000";
         String loadedPlayersCount = economyManager != null ? String.valueOf(economyManager.getLoadedPlayersCount()) : "0";
+        String mysqlActiveConnections = economyManager != null ? String.valueOf(economyManager.getActiveMysqlConnectionCount()) : "0";
+        String mysqlCurrentEconomy = economyManager != null && economyManager.getStorageType() == StorageType.MYSQL ? getConfiguredMysqlTable() : storageType;
 
         placeholders.put("%plugin%", prefix);
         placeholders.put("%chatplugin%", getConfig().getString("config.chat-prefix", "&4&l[&6&lMineconomy&4&l]&f"));
@@ -155,10 +166,13 @@ public class Mineconomy extends JavaPlugin implements Listener {
         placeholders.put("%latestversion%", lastVersion);
         placeholders.put("%link%", "https://www.spigotmc.org/resources/" + spigotID);
         placeholders.put("%author%", "Guayand0");
+        placeholders.put("%storageType%", storageType);
         placeholders.put("%dataStorage%", storageType);
-        placeholders.put("%playerTop%", "0");
-        placeholders.put("%playerName%", "");
-        placeholders.put("%balance%", "");
+        placeholders.put("%playerTop%", "-");
+        placeholders.put("%playerName%", "-");
+        placeholders.put("%balance%", "-");
+        placeholders.put("%balance_short%", "-");
+        placeholders.put("%amount_short%", "-");
         placeholders.put("%totalStorageAvgQueryMs%", averageStorageTime);
         placeholders.put("%totalStorageQueryCount%", storageOperations);
         placeholders.put("%readStorageQueryCount%", readStorageOperations);
@@ -166,6 +180,8 @@ public class Mineconomy extends JavaPlugin implements Listener {
         placeholders.put("%readStorageAvgQueryMs%", readStorageAverageTime);
         placeholders.put("%writeStorageAvgQueryMs%", writeStorageAverageTime);
         placeholders.put("%loadedPlayersCount%", loadedPlayersCount);
+        placeholders.put("%mysqlActiveConnections%", mysqlActiveConnections);
+        placeholders.put("%mysqlCurrentEconomy%", mysqlCurrentEconomy);
     }
 
     private void scheduleLoadedPlayerCacheCleanup() {
@@ -239,7 +255,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText("&fCurrent version: &c" + currentVersion + "&f, latest version: &a" + lastVersion + "&f!"));
             Bukkit.getConsoleSender().sendMessage("");
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText( "     &eSpigotMC -> &fhttps://www.spigotmc.org/resources/" + spigotID));
-            Bukkit.getConsoleSender().sendMessage(MU.getColoredText( "     &ePolyMart -> &fhttps://www.polymart.org/product/9587"));
+            Bukkit.getConsoleSender().sendMessage(MU.getColoredText( "     &eVoxel -> &fhttps://voxel.shop/product/9587"));
             Bukkit.getConsoleSender().sendMessage("");
         } else {
             if (!updateCheckerWork) {
@@ -262,6 +278,34 @@ public class Mineconomy extends JavaPlugin implements Listener {
 
     public EconomyManager getEconomyManager() {
         return economyManager;
+    }
+
+    public MysqlEconomyLookupService getMysqlEconomyLookupService() {
+        return mysqlEconomyLookupService;
+    }
+
+    public int getActiveMysqlConnectionCount() {
+        return economyManager != null ? economyManager.getActiveMysqlConnectionCount() : 0;
+    }
+
+    public String formatShortAmount(double amount) {
+        double normalizedAmount = Math.max(0.0D, amount);
+        if (normalizedAmount < 1000.0D) {
+            return shortAmountFormat.format(normalizedAmount);
+        }
+
+        int suffixIndex = 0;
+        double shortenedAmount = normalizedAmount;
+        while (shortenedAmount >= 1000.0D && suffixIndex < SHORT_SUFFIXES.length - 1) {
+            shortenedAmount /= 1000.0D;
+            suffixIndex++;
+        }
+
+        return shortAmountFormat.format(shortenedAmount) + SHORT_SUFFIXES[suffixIndex];
+    }
+
+    public String getConfiguredMysqlTable() {
+        return MysqlStorageSettings.fromConfig(this).getTableName();
     }
 
     public boolean getPlaceholderAPI() {

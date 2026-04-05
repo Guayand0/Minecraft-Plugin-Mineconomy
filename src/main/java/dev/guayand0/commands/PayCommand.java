@@ -70,6 +70,7 @@ public class PayCommand implements CommandExecutor {
 
         ph.put("%target%", target.getName());
         ph.put("%amount%", amountFormat.format(amount));
+        ph.put("%amount_short%", plugin.formatShortAmount(amount));
         plugin.sendMessage(sender, "messages.pay.sent", ph);
 
         if (target.isOnline() && target.getPlayer() != null) {

@@ -1,6 +1,7 @@
 package dev.guayand0.economy;
 
 import dev.guayand0.economy.backend.StorageBackend;
+import dev.guayand0.economy.backend.sql.MysqlEconomyStorage;
 import dev.guayand0.economy.type.StorageType;
 import dev.guayand0.utils.PlayerUtils;
 import org.bukkit.Bukkit;
@@ -196,6 +197,18 @@ public class EconomyManager {
 
     public int getLoadedPlayersCount() {
         return cachedBalances.size();
+    }
+
+    public int getActiveMysqlConnectionCount() {
+        return storage.getActiveMysqlConnectionCount();
+    }
+
+    public double getMysqlBalanceFromTable(String tableName, UUID uuid) {
+        return storage.getMysqlBalanceFromTable(tableName, uuid);
+    }
+
+    public List<MysqlEconomyStorage.MysqlTopEntry> getMysqlTopBalancesFromTable(String tableName, int limit) {
+        return storage.getMysqlTopBalancesFromTable(tableName, limit);
     }
 
     public List<TopEntry> getTopEntries(int requestedAmount) {
