@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class MysqlEconomyStorage extends AbstractStorageBackend {
 
@@ -32,6 +33,8 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
     private PreparedStatement mysqlTopBalancesStatement;
     private final Map<String, PreparedStatement> mysqlBalanceStatementsByTable = new ConcurrentHashMap<>();
     private final Map<String, PreparedStatement> mysqlTopStatementsByTable = new ConcurrentHashMap<>();
+    private volatile long lastLookupFailureLogAt;
+    private volatile boolean mysqlLookupUnavailable;
 
     public MysqlEconomyStorage(Plugin plugin) {
         super(plugin);
@@ -207,11 +210,13 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
                 PreparedStatement statement = getMysqlBalanceStatementForTable(normalizedTableName);
                 statement.setString(1, uuid.toString());
                 try (ResultSet resultSet = statement.executeQuery()) {
+                    markLookupHealthy();
                     return resultSet.next() ? resultSet.getDouble("balance") : 0.0D;
                 }
             } catch (SQLException exception) {
                 resetMysqlConnection();
-                throw new RuntimeException("Could not read player economy from MYSQL table " + normalizedTableName, exception);
+                logLookupFailure("balance lookup", normalizedTableName, exception);
+                return 0.0D;
             }
         }
     }
@@ -235,10 +240,12 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
                         ));
                     }
                 }
+                markLookupHealthy();
                 return topBalances;
             } catch (SQLException exception) {
                 resetMysqlConnection();
-                throw new RuntimeException("Could not read top economy from MYSQL table " + normalizedTableName, exception);
+                logLookupFailure("top lookup", normalizedTableName, exception);
+                return topBalances;
             }
         }
     }
@@ -381,6 +388,27 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
         closeMysqlResources();
     }
 
+    private void logLookupFailure(String operation, String tableName, SQLException exception) {
+        long now = System.currentTimeMillis();
+        long cooldownMillis = TimeUnit.SECONDS.toMillis(30);
+        if (now - lastLookupFailureLogAt < cooldownMillis) {
+            return;
+        }
+
+        lastLookupFailureLogAt = now;
+        mysqlLookupUnavailable = true;
+        plugin.getLogger().warning("MYSQL " + operation + " failed for table '" + tableName + "'. Returning fallback values until the connection recovers: " + exception.getMessage());
+    }
+
+    private void markLookupHealthy() {
+        if (!mysqlLookupUnavailable) {
+            return;
+        }
+
+        mysqlLookupUnavailable = false;
+        plugin.getLogger().info("MYSQL lookups recovered successfully.");
+    }
+
     private void ensurePlayerNameColumn(Statement statement) throws SQLException {
         try {
             statement.executeUpdate("ALTER TABLE " + settings.getTableName() + " ADD COLUMN player_name VARCHAR(16) DEFAULT NULL");
@@ -398,7 +426,8 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
             return supplier.get();
         } catch (SQLException retryException) {
             retryException.addSuppressed(cause);
-            throw new RuntimeException(message, retryException);
+            logLookupFailure(message, settings.getTableName(), retryException);
+            return 0.0D;
         }
     }
 
@@ -408,7 +437,8 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
             return supplier.get();
         } catch (SQLException retryException) {
             retryException.addSuppressed(cause);
-            throw new RuntimeException(message, retryException);
+            logLookupFailure(message, settings.getTableName(), retryException);
+            return false;
         }
     }
 
@@ -418,7 +448,8 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
             return supplier.get();
         } catch (SQLException retryException) {
             retryException.addSuppressed(cause);
-            throw new RuntimeException(message, retryException);
+            logLookupFailure(message, settings.getTableName(), retryException);
+            return new ArrayList<>();
         }
     }
 

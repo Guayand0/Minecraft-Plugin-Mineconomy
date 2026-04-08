@@ -66,67 +66,72 @@ public class PAPIVariables extends PlaceholderExpansion {
             return "";
         }
 
-        String currentTableAliasValue = getConfiguredMysqlAliasValue(player, identifier);
-        if (currentTableAliasValue != null) {
-            return currentTableAliasValue;
-        }
-
-        String dynamicMysqlValue = getDynamicMysqlPlaceholderValue(player, identifier);
-        if (dynamicMysqlValue != null) {
-            return dynamicMysqlValue;
-        }
-
-        if ("player_name".equalsIgnoreCase(identifier)) {
-            return player != null ? player.getName() : "";
-        }
-
-        if ("mysql_current_economy".equalsIgnoreCase(identifier)) {
-            return plugin.getEconomyManager().getStorageType() == StorageType.MYSQL
-                    ? plugin.getConfiguredMysqlTable()
-                    : plugin.getEconomyManager().getStorageType().name();
-        }
-
-        if ("storage_type".equalsIgnoreCase(identifier)) {
-            return plugin.getEconomyManager().getStorageType().name();
-        }
-
-        if ("player_balance".equalsIgnoreCase(identifier)) {
-            return player != null ? amountFormat.format(plugin.getEconomyManager().getBalance(player)) : "0";
-        }
-
-        if ("player_balance_short".equalsIgnoreCase(identifier)) {
-            return player != null ? formatShortAmount(plugin.getEconomyManager().getBalance(player)) : "0";
-        }
-
-        if ("player_top".equalsIgnoreCase(identifier)) {
-            if (player == null) {
-                return "0";
+        try {
+            String currentTableAliasValue = getConfiguredMysqlAliasValue(player, identifier);
+            if (currentTableAliasValue != null) {
+                return currentTableAliasValue;
             }
-            return String.valueOf(plugin.getEconomyManager().getTopPosition(player.getUniqueId()));
-        }
 
-        if (identifier.startsWith("top_player_name_")) {
-            int rank = parsePositiveInt(identifier, "top_player_name_");
-            if (rank < 0) {
-                return invalidRankValue(rank);
+            String dynamicMysqlValue = getDynamicMysqlPlaceholderValue(player, identifier);
+            if (dynamicMysqlValue != null) {
+                return dynamicMysqlValue;
             }
-            return getTopPlayerName(rank);
-        }
 
-        if (identifier.startsWith("top_player_balance_short_")) {
-            int rank = parsePositiveInt(identifier, "top_player_balance_short_");
-            if (rank < 0) {
-                return invalidRankValue(rank);
+            if ("player_name".equalsIgnoreCase(identifier)) {
+                return player != null ? player.getName() : "";
             }
-            return getTopPlayerBalanceShort(rank);
-        }
 
-        if (identifier.startsWith("top_player_balance_")) {
-            int rank = parsePositiveInt(identifier, "top_player_balance_");
-            if (rank < 0) {
-                return invalidRankValue(rank);
+            if ("mysql_current_economy".equalsIgnoreCase(identifier)) {
+                return plugin.getEconomyManager().getStorageType() == StorageType.MYSQL
+                        ? plugin.getConfiguredMysqlTable()
+                        : plugin.getEconomyManager().getStorageType().name();
             }
-            return getTopPlayerBalance(rank);
+
+            if ("storage_type".equalsIgnoreCase(identifier)) {
+                return plugin.getEconomyManager().getStorageType().name();
+            }
+
+            if ("player_balance".equalsIgnoreCase(identifier)) {
+                return player != null ? amountFormat.format(plugin.getEconomyManager().getBalance(player)) : "0";
+            }
+
+            if ("player_balance_short".equalsIgnoreCase(identifier)) {
+                return player != null ? formatShortAmount(plugin.getEconomyManager().getBalance(player)) : "0";
+            }
+
+            if ("player_top".equalsIgnoreCase(identifier)) {
+                if (player == null) {
+                    return "0";
+                }
+                return String.valueOf(plugin.getEconomyManager().getTopPosition(player.getUniqueId()));
+            }
+
+            if (identifier.startsWith("top_player_name_")) {
+                int rank = parsePositiveInt(identifier, "top_player_name_");
+                if (rank < 0) {
+                    return invalidRankValue(rank);
+                }
+                return getTopPlayerName(rank);
+            }
+
+            if (identifier.startsWith("top_player_balance_short_")) {
+                int rank = parsePositiveInt(identifier, "top_player_balance_short_");
+                if (rank < 0) {
+                    return invalidRankValue(rank);
+                }
+                return getTopPlayerBalanceShort(rank);
+            }
+
+            if (identifier.startsWith("top_player_balance_")) {
+                int rank = parsePositiveInt(identifier, "top_player_balance_");
+                if (rank < 0) {
+                    return invalidRankValue(rank);
+                }
+                return getTopPlayerBalance(rank);
+            }
+        } catch (RuntimeException exception) {
+            plugin.getLogger().warning("Placeholder '" + identifier + "' failed to resolve cleanly. Returning a safe fallback value: " + exception.getMessage());
+            return safeFallbackValue(identifier);
         }
 
         return null;
@@ -313,5 +318,13 @@ public class PAPIVariables extends PlaceholderExpansion {
 
     private String invalidRankValue(int result) {
         return result == -2 ? "NEGATIVE_VALUE" : "NOT_A_NUMBER";
+    }
+
+    private String safeFallbackValue(String identifier) {
+        String normalizedIdentifier = identifier == null ? "" : identifier.toLowerCase();
+        if (normalizedIdentifier.contains("player_name")) {
+            return "";
+        }
+        return "0";
     }
 }
