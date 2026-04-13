@@ -23,6 +23,7 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
     private PreparedStatement sqliteWriteBalanceStatement;
     private PreparedStatement sqliteUpdatePlayerNameStatement;
     private PreparedStatement sqliteRegisteredAccountsStatement;
+    private PreparedStatement sqliteRegisteredAccountCountStatement;
     private PreparedStatement sqliteTopBalancesStatement;
 
     public SqliteEconomyStorage(Plugin plugin) {
@@ -51,12 +52,13 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
     }
 
     @Override
-    protected void doCreateAccount(UUID uuid) {
+    protected boolean doCreateAccount(UUID uuid) {
         if (doHasAccount(uuid)) {
-            return;
+            return false;
         }
 
         doSetBalance(uuid, 0.0D);
+        return true;
     }
 
     @Override
@@ -156,6 +158,19 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
         }
     }
 
+    @Override
+    protected int doGetRegisteredAccountCount() {
+        try {
+            PreparedStatement statement = getSqliteRegisteredAccountCountStatement();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getInt(1) : 0;
+            }
+        } catch (SQLException exception) {
+            resetSqliteConnection();
+            throw new RuntimeException("Could not count registered accounts from SQLITE storage", exception);
+        }
+    }
+
     private void initialize() {
         String sql = "CREATE TABLE IF NOT EXISTS economy (" +
                 "uuid CHAR(36) PRIMARY KEY," +
@@ -189,6 +204,9 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
             );
             sqliteRegisteredAccountsStatement = connection.prepareStatement(
                     "SELECT uuid, player_name, balance FROM economy"
+            );
+            sqliteRegisteredAccountCountStatement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM economy"
             );
             sqliteTopBalancesStatement = connection.prepareStatement(
                     "SELECT uuid, player_name, balance FROM economy ORDER BY balance DESC, uuid ASC LIMIT ?"
@@ -253,6 +271,13 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
         return sqliteRegisteredAccountsStatement;
     }
 
+    private PreparedStatement getSqliteRegisteredAccountCountStatement() throws SQLException {
+        if (sqliteRegisteredAccountCountStatement == null || sqliteRegisteredAccountCountStatement.isClosed()) {
+            initializeSqliteStatements();
+        }
+        return sqliteRegisteredAccountCountStatement;
+    }
+
     private PreparedStatement getSqliteTopBalancesStatement() throws SQLException {
         if (sqliteTopBalancesStatement == null || sqliteTopBalancesStatement.isClosed()) {
             initializeSqliteStatements();
@@ -312,6 +337,13 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
         }
 
         try {
+            if (sqliteRegisteredAccountCountStatement != null && !sqliteRegisteredAccountCountStatement.isClosed()) {
+                sqliteRegisteredAccountCountStatement.close();
+            }
+        } catch (SQLException ignored) {
+        }
+
+        try {
             if (sqliteTopBalancesStatement != null && !sqliteTopBalancesStatement.isClosed()) {
                 sqliteTopBalancesStatement.close();
             }
@@ -330,6 +362,7 @@ public class SqliteEconomyStorage extends AbstractStorageBackend {
         sqliteWriteBalanceStatement = null;
         sqliteUpdatePlayerNameStatement = null;
         sqliteRegisteredAccountsStatement = null;
+        sqliteRegisteredAccountCountStatement = null;
         sqliteTopBalancesStatement = null;
         sqliteConnection = null;
     }

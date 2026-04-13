@@ -37,8 +37,8 @@ public class EconomyStorage {
         return backend.hasAccount(uuid);
     }
 
-    public void createAccount(UUID uuid) {
-        backend.createAccount(uuid);
+    public boolean createAccount(UUID uuid) {
+        return backend.createAccount(uuid);
     }
 
     public void updatePlayerName(UUID uuid, String playerName) {
@@ -79,6 +79,10 @@ public class EconomyStorage {
 
     public List<StorageBackend.AccountBalance> getRegisteredAccounts() {
         return backend.getRegisteredAccounts();
+    }
+
+    public int getRegisteredAccountCount() {
+        return backend.getRegisteredAccountCount();
     }
 
     public List<StorageBackend.AccountBalance> getTopBalances(int limit) {

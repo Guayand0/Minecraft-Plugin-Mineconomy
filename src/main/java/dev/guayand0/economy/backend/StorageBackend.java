@@ -10,7 +10,7 @@ public interface StorageBackend {
 
     boolean hasAccount(UUID uuid);
 
-    void createAccount(UUID uuid);
+    boolean createAccount(UUID uuid);
 
     void updatePlayerName(UUID uuid, String playerName);
 
@@ -31,6 +31,8 @@ public interface StorageBackend {
     long getWriteStorageOperationCount();
 
     List<AccountBalance> getRegisteredAccounts();
+
+    int getRegisteredAccountCount();
 
     List<AccountBalance> getTopBalances(int limit);
 

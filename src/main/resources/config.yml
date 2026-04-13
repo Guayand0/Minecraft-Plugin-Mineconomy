@@ -61,6 +61,10 @@ config:
   # If set to false, players will not be able to use "/balance" and "/money"
   balance-command-enabled: true
 
+  # Include players with 0 balance in "/money top" and top placeholders
+  # If set to false, only players with a balance greater than 0 will appear
+  top-include-zero-balances: false
+
   # Enable/Disable the "/pay <player> <amount>" command and its tab completion
   # If set to false, players will not be able to use "/pay"
   pay-command-enabled: true

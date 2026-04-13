@@ -75,6 +75,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
             Bukkit.getConsoleSender().sendMessage(MU.getColoredText("&7<--------------------------------------------------------------------->"));
 
             economyManager = new EconomyManager(this);
+            registrarPluginPlaceholders();
             mysqlEconomyLookupService = new MysqlEconomyLookupService(economyManager);
             vaultEconomyProvider = new VaultEconomyProvider(this);
             schedulerCompat = new SchedulerCompat(this);
@@ -157,6 +158,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
         String readStorageAverageTime = economyManager != null ? economyManager.getReadStorageAverageMillisFormatted() : "0.000";
         String writeStorageAverageTime = economyManager != null ? economyManager.getWriteStorageAverageMillisFormatted() : "0.000";
         String loadedPlayersCount = economyManager != null ? String.valueOf(economyManager.getLoadedPlayersCount()) : "0";
+        String registeredAccountsCount = economyManager != null ? String.valueOf(economyManager.getRegisteredAccountCount()) : "0";
         String mysqlActiveConnections = economyManager != null ? String.valueOf(economyManager.getActiveMysqlConnectionCount()) : "0";
         String mysqlCurrentEconomy = economyManager != null && economyManager.getStorageType() == StorageType.MYSQL ? getConfiguredMysqlTable() : storageType;
 
@@ -180,6 +182,7 @@ public class Mineconomy extends JavaPlugin implements Listener {
         placeholders.put("%readStorageAvgQueryMs%", readStorageAverageTime);
         placeholders.put("%writeStorageAvgQueryMs%", writeStorageAverageTime);
         placeholders.put("%loadedPlayersCount%", loadedPlayersCount);
+        placeholders.put("%registeredPlayersCount%", registeredAccountsCount);
         placeholders.put("%mysqlActiveConnections%", mysqlActiveConnections);
         placeholders.put("%mysqlCurrentEconomy%", mysqlCurrentEconomy);
     }

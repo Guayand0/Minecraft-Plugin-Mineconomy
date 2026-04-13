@@ -39,12 +39,13 @@ public class JsonEconomyStorage extends AbstractStorageBackend {
     }
 
     @Override
-    protected void doCreateAccount(UUID uuid) {
+    protected boolean doCreateAccount(UUID uuid) {
         if (doHasAccount(uuid)) {
-            return;
+            return false;
         }
 
         doSetBalance(uuid, 0.0D);
+        return true;
     }
 
     @Override
@@ -165,6 +166,12 @@ public class JsonEconomyStorage extends AbstractStorageBackend {
             reusableTopBalances.clear();
             return result;
         }
+    }
+
+    @Override
+    protected int doGetRegisteredAccountCount() {
+        File[] files = getTypeFolder().listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+        return files == null ? 0 : files.length;
     }
 
     private File getJsonFile(UUID uuid) {

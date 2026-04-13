@@ -1,5 +1,6 @@
 package dev.guayand0.economy;
 
+import dev.guayand0.Mineconomy;
 import dev.guayand0.economy.backend.StorageBackend;
 import dev.guayand0.economy.backend.sql.MysqlEconomyStorage;
 import dev.guayand0.economy.type.StorageType;
@@ -20,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EconomyManager {
 
+    private final Plugin plugin;
     private final EconomyStorage storage;
     private final PlayerUtils playerUtils = new PlayerUtils();
     private final Map<UUID, Double> cachedBalances = new ConcurrentHashMap<>();
@@ -28,6 +30,7 @@ public class EconomyManager {
     private final Map<String, String> registeredPlayerDisplayNames = new ConcurrentHashMap<>();
 
     public EconomyManager(Plugin plugin) {
+        this.plugin = plugin;
         this.storage = new EconomyStorage(plugin);
         cacheKnownPlayers();
         cacheRegisteredPlayers();
@@ -37,9 +40,9 @@ public class EconomyManager {
         storage.close();
     }
 
-    public void loadPlayerEconomy(Player player) {
+    public boolean loadPlayerEconomy(Player player) {
         cachePlayer(player);
-        storage.createAccount(player.getUniqueId());
+        boolean created = storage.createAccount(player.getUniqueId());
         storage.updatePlayerName(player.getUniqueId(), player.getName());
         markRegisteredPlayer(player);
         if (usesLocalBalanceCache()) {
@@ -47,6 +50,8 @@ public class EconomyManager {
         } else {
             cachedBalances.remove(player.getUniqueId());
         }
+        refreshRegisteredAccountPlaceholdersIfNeeded(created);
+        return created;
     }
 
     public void savePlayerEconomy(Player player) {
@@ -97,7 +102,7 @@ public class EconomyManager {
 
     public boolean createAccount(OfflinePlayer player) {
         cachePlayer(player);
-        storage.createAccount(player.getUniqueId());
+        boolean created = storage.createAccount(player.getUniqueId());
         if (player.getName() != null && !player.getName().isEmpty()) {
             storage.updatePlayerName(player.getUniqueId(), player.getName());
         }
@@ -105,7 +110,8 @@ public class EconomyManager {
         if (player.isOnline() && usesLocalBalanceCache()) {
             cachedBalances.putIfAbsent(player.getUniqueId(), storage.getBalance(player.getUniqueId()));
         }
-        return true;
+        refreshRegisteredAccountPlaceholdersIfNeeded(created);
+        return created;
     }
 
     public double getBalance(OfflinePlayer player) {
@@ -131,6 +137,7 @@ public class EconomyManager {
     public void setBalance(OfflinePlayer player, double amount) {
         cachePlayer(player);
         double normalizedAmount = Math.max(0.0D, amount);
+        boolean created = storage.createAccount(player.getUniqueId());
         markRegisteredPlayer(player);
         if (usesLocalBalanceCache()) {
             cachedBalances.put(player.getUniqueId(), normalizedAmount);
@@ -138,6 +145,10 @@ public class EconomyManager {
             cachedBalances.remove(player.getUniqueId());
         }
         storage.setBalance(player.getUniqueId(), normalizedAmount);
+        if (player.getName() != null && !player.getName().isEmpty()) {
+            storage.updatePlayerName(player.getUniqueId(), player.getName());
+        }
+        refreshRegisteredAccountPlaceholdersIfNeeded(created);
     }
 
     public void addBalance(OfflinePlayer player, double amount) {
@@ -165,6 +176,10 @@ public class EconomyManager {
         List<String> names = new ArrayList<>(registeredPlayerDisplayNames.values());
         Collections.sort(names, String.CASE_INSENSITIVE_ORDER);
         return names;
+    }
+
+    public int getRegisteredAccountCount() {
+        return storage.getRegisteredAccountCount();
     }
 
     public StorageType getStorageType() {
@@ -216,13 +231,20 @@ public class EconomyManager {
             return Collections.emptyList();
         }
 
-        List<StorageBackend.AccountBalance> topBalances = storage.getTopBalances(requestedAmount);
+        boolean includeZeroBalances = plugin.getConfig().getBoolean("config.top-include-zero-balances", true);
+        int fetchLimit = includeZeroBalances ? requestedAmount : Math.max(requestedAmount, storage.getRegisteredAccountCount());
+
+        List<StorageBackend.AccountBalance> topBalances = storage.getTopBalances(fetchLimit);
         if (topBalances.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<TopEntry> topEntries = new ArrayList<>(topBalances.size());
         for (StorageBackend.AccountBalance accountBalance : topBalances) {
+            if (!includeZeroBalances && accountBalance.getBalance() <= 0.0D) {
+                continue;
+            }
+
             String playerName = accountBalance.getPlayerName();
             if (playerName == null || playerName.isEmpty()) {
                 playerName = getDisplayName(accountBalance.getUuid());
@@ -232,6 +254,9 @@ public class EconomyManager {
             }
 
             topEntries.add(new TopEntry(accountBalance.getUuid(), playerName, accountBalance.getBalance()));
+            if (topEntries.size() >= requestedAmount) {
+                break;
+            }
         }
 
         topEntries.sort(
@@ -306,6 +331,14 @@ public class EconomyManager {
         if (player != null && player.getName() != null && !player.getName().isEmpty()) {
             registeredPlayerDisplayNames.put(player.getName().toLowerCase(), player.getName());
         }
+    }
+
+    private void refreshRegisteredAccountPlaceholdersIfNeeded(boolean created) {
+        if (!created || !(plugin instanceof Mineconomy)) {
+            return;
+        }
+
+        ((Mineconomy) plugin).registrarPluginPlaceholders();
     }
 
     private boolean usesLocalBalanceCache() {

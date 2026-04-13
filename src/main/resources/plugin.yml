@@ -1,10 +1,13 @@
 main: dev.guayand0.Mineconomy
 name: Mineconomy
-version: 1.0.6
+version: ${project.version}
 author: Guayand0
 api-version: 1.13
 folia-supported: true
 description: This plugin adds a simple economy.
+
+load: STARTUP
+loadbefore: [ MineBank ]
 
 depend:
   - Vault

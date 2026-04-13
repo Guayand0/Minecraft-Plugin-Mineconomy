@@ -91,6 +91,10 @@ public class PAPIVariables extends PlaceholderExpansion {
                 return plugin.getEconomyManager().getStorageType().name();
             }
 
+            if ("registered_players_count".equalsIgnoreCase(identifier)) {
+                return String.valueOf(plugin.getEconomyManager().getRegisteredAccountCount());
+            }
+
             if ("player_balance".equalsIgnoreCase(identifier)) {
                 return player != null ? amountFormat.format(plugin.getEconomyManager().getBalance(player)) : "0";
             }

@@ -30,6 +30,7 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
     private PreparedStatement mysqlWriteBalanceStatement;
     private PreparedStatement mysqlUpdatePlayerNameStatement;
     private PreparedStatement mysqlRegisteredAccountsStatement;
+    private PreparedStatement mysqlRegisteredAccountCountStatement;
     private PreparedStatement mysqlTopBalancesStatement;
     private final Map<String, PreparedStatement> mysqlBalanceStatementsByTable = new ConcurrentHashMap<>();
     private final Map<String, PreparedStatement> mysqlTopStatementsByTable = new ConcurrentHashMap<>();
@@ -71,19 +72,20 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
     }
 
     @Override
-    protected void doCreateAccount(UUID uuid) {
+    protected boolean doCreateAccount(UUID uuid) {
         synchronized (mysqlLock) {
             if (knownAccounts.contains(uuid) || doHasAccount(uuid)) {
-                return;
+                return false;
             }
 
             try {
                 PreparedStatement statement = getMysqlInsertIfMissingStatement();
                 statement.setString(1, uuid.toString());
-                statement.executeUpdate();
+                int rows = statement.executeUpdate();
                 knownAccounts.add(uuid);
+                return rows > 0;
             } catch (SQLException exception) {
-                retryMysqlVoidOperation(() -> doCreateAccount(uuid), exception, "Could not create player economy account in MYSQL storage");
+                return retryMysqlBooleanOperation(() -> doCreateAccount(uuid), exception, "Could not create player economy account in MYSQL storage");
             }
         }
     }
@@ -181,6 +183,30 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
                 return accounts;
             } catch (SQLException exception) {
                 return retryMysqlTopOperation(this::doGetRegisteredAccounts, exception, "Could not read registered accounts from MYSQL storage");
+            }
+        }
+    }
+
+    @Override
+    protected int doGetRegisteredAccountCount() {
+        synchronized (mysqlLock) {
+            try {
+                PreparedStatement statement = getMysqlRegisteredAccountCountStatement();
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            } catch (SQLException exception) {
+                try {
+                    resetMysqlConnection();
+                    PreparedStatement statement = getMysqlRegisteredAccountCountStatement();
+                    try (ResultSet resultSet = statement.executeQuery()) {
+                        return resultSet.next() ? resultSet.getInt(1) : 0;
+                    }
+                } catch (SQLException retryException) {
+                    retryException.addSuppressed(exception);
+                    logLookupFailure("registered account count", settings.getTableName(), retryException);
+                    return 0;
+                }
             }
         }
     }
@@ -289,6 +315,9 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
             mysqlRegisteredAccountsStatement = connection.prepareStatement(
                     "SELECT uuid, player_name, balance FROM " + tableName
             );
+            mysqlRegisteredAccountCountStatement = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM " + tableName
+            );
             mysqlTopBalancesStatement = connection.prepareStatement(
                     "SELECT uuid, player_name, balance FROM " + tableName + " ORDER BY balance DESC, uuid ASC LIMIT ?"
             );
@@ -349,6 +378,13 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
             initializeMysqlStatements();
         }
         return mysqlRegisteredAccountsStatement;
+    }
+
+    private PreparedStatement getMysqlRegisteredAccountCountStatement() throws SQLException {
+        if (mysqlRegisteredAccountCountStatement == null || mysqlRegisteredAccountCountStatement.isClosed()) {
+            initializeMysqlStatements();
+        }
+        return mysqlRegisteredAccountCountStatement;
     }
 
     private PreparedStatement getMysqlTopBalancesStatement() throws SQLException {
@@ -517,6 +553,13 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
         }
 
         try {
+            if (mysqlRegisteredAccountCountStatement != null && !mysqlRegisteredAccountCountStatement.isClosed()) {
+                mysqlRegisteredAccountCountStatement.close();
+            }
+        } catch (SQLException ignored) {
+        }
+
+        try {
             if (mysqlConnection != null && !mysqlConnection.isClosed()) {
                 mysqlConnection.close();
             }
@@ -529,6 +572,7 @@ public class MysqlEconomyStorage extends AbstractStorageBackend {
         mysqlWriteBalanceStatement = null;
         mysqlUpdatePlayerNameStatement = null;
         mysqlRegisteredAccountsStatement = null;
+        mysqlRegisteredAccountCountStatement = null;
         mysqlTopBalancesStatement = null;
         mysqlBalanceStatementsByTable.clear();
         mysqlTopStatementsByTable.clear();

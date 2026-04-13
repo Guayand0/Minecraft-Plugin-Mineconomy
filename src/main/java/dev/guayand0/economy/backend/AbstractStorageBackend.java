@@ -38,10 +38,10 @@ public abstract class AbstractStorageBackend implements StorageBackend {
     }
 
     @Override
-    public final void createAccount(UUID uuid) {
+    public final boolean createAccount(UUID uuid) {
         long startedAt = System.nanoTime();
         try {
-            doCreateAccount(uuid);
+            return doCreateAccount(uuid);
         } finally {
             recordWriteStorageOperation(startedAt);
         }
@@ -96,6 +96,16 @@ public abstract class AbstractStorageBackend implements StorageBackend {
         long startedAt = System.nanoTime();
         try {
             return doGetRegisteredAccounts();
+        } finally {
+            recordReadStorageOperation(startedAt);
+        }
+    }
+
+    @Override
+    public final int getRegisteredAccountCount() {
+        long startedAt = System.nanoTime();
+        try {
+            return doGetRegisteredAccountCount();
         } finally {
             recordReadStorageOperation(startedAt);
         }
@@ -178,7 +188,7 @@ public abstract class AbstractStorageBackend implements StorageBackend {
 
     protected abstract boolean doHasAccount(UUID uuid);
 
-    protected abstract void doCreateAccount(UUID uuid);
+    protected abstract boolean doCreateAccount(UUID uuid);
 
     protected abstract double doGetBalance(UUID uuid);
 
@@ -188,6 +198,10 @@ public abstract class AbstractStorageBackend implements StorageBackend {
 
     protected List<AccountBalance> doGetRegisteredAccounts() {
         return doGetTopBalances(Integer.MAX_VALUE);
+    }
+
+    protected int doGetRegisteredAccountCount() {
+        return doGetRegisteredAccounts().size();
     }
 
     protected abstract List<AccountBalance> doGetTopBalances(int limit);

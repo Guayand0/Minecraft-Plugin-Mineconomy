@@ -33,12 +33,13 @@ public class YamlEconomyStorage extends AbstractStorageBackend {
     }
 
     @Override
-    protected void doCreateAccount(UUID uuid) {
+    protected boolean doCreateAccount(UUID uuid) {
         if (doHasAccount(uuid)) {
-            return;
+            return false;
         }
 
         doSetBalance(uuid, 0.0D);
+        return true;
     }
 
     @Override
@@ -141,6 +142,12 @@ public class YamlEconomyStorage extends AbstractStorageBackend {
             reusableTopBalances.clear();
             return result;
         }
+    }
+
+    @Override
+    protected int doGetRegisteredAccountCount() {
+        File[] files = getTypeFolder().listFiles((dir, name) -> name.toLowerCase().endsWith(".yml"));
+        return files == null ? 0 : files.length;
     }
 
     private void saveYaml(File file, FileConfiguration configuration) {
